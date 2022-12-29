@@ -3,7 +3,6 @@ import os
 import sys
 
 
-
 def load_image(name, colorkey=None):
     fullname = os.path.join('data', name)
     if not os.path.isfile(fullname):
@@ -27,10 +26,32 @@ class Hero(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = pos[0]
         self.rect.y = pos[1]
+        self.last_move = [0, 0]
 
     def update(self, new_pos):
-        self.rect.x += new_pos[0]
-        self.rect.y += new_pos[1]
+        if not pygame.sprite.spritecollideany(self, vertical_borders):
+            self.rect.x += new_pos[0]
+            self.last_move = new_pos
+        else:
+            self.rect.x -= self.last_move[0]
+        if not pygame.sprite.spritecollideany(self, horizontal_borders):
+            self.rect.y += new_pos[1]
+        else:
+            self.rect.y -= self.last_move[1]
+        print(self.last_move)
+
+
+class Border(pygame.sprite.Sprite):
+    def __init__(self, x1, y1, x2, y2):
+        super().__init__(all_sprites)
+        if x1 == x2:
+            self.add(vertical_borders)
+            self.image = pygame.Surface([1, y2 - y1])
+            self.rect = pygame.Rect(x1, y1, 1, y2 - y1)
+        else:
+            self.add(horizontal_borders)
+            self.image = pygame.Surface([x2 - x1, 1])
+            self.rect = pygame.Rect(x1, y1, x2 - x1, 1)
 
 
 pygame.init()
@@ -41,6 +62,12 @@ screen.fill(pygame.Color('WHITE'))
 all_sprites = pygame.sprite.Group()
 hero = Hero(all_sprites, (10, 10))
 all_sprites.draw(screen)
+horizontal_borders = pygame.sprite.Group()
+vertical_borders = pygame.sprite.Group()
+Border(5, 5, size[0] - 5, 5)
+Border(5, size[1] - 5, size[0] - 5, size[1] - 5)
+Border(5, 5, 5, size[1] - 5)
+Border(size[0] - 5, 5, size[0] - 5, size[1] - 5)
 pygame.display.flip()
 fps = 50  # количество кадров в секунду
 clock = pygame.time.Clock()
