@@ -3,7 +3,7 @@ import os
 import sys
 
 
-def load_image(name, colorkey=None):
+def load_image(name, colorkey=-1):
     fullname = os.path.join('data', name)
     if not os.path.isfile(fullname):
         print(f"Файл с изображением '{fullname}' не найден")
@@ -36,9 +36,29 @@ class Player(pygame.sprite.Sprite):
             self.rect.x -= self.last_move[0]
         if not pygame.sprite.spritecollideany(self, horizontal_borders):
             self.rect.y += new_pos[1]
+            self.last_move = new_pos
         else:
             self.rect.y -= self.last_move[1]
         print(self.last_move)
+
+
+class Health(pygame.sprite.Sprite):
+    def __init__(self, pos):
+        super().__init__(all_sprites)
+        self.image = load_image('health.png')
+        self.rect = self.image.get_rect()
+        self.rect.x = pos[0]
+        self.rect.y = pos[1]
+
+    def down(self):
+        del self
+
+    def update(self, action):
+        if action == 1: #здесь будет какая-то хилка
+            health.append(Health((health[-1].rect.x + 10, 10)))
+        else:
+            health[-1].down()
+
 
 
 class Border(pygame.sprite.Sprite):
@@ -60,14 +80,19 @@ gaming = True
 screen = pygame.display.set_mode(size)
 screen.fill(pygame.Color('WHITE'))
 all_sprites = pygame.sprite.Group()
-player = Player(all_sprites, (10, 10))
+player = Player(all_sprites, (40, 50))
 all_sprites.draw(screen)
 horizontal_borders = pygame.sprite.Group()
 vertical_borders = pygame.sprite.Group()
-Border(5, 5, size[0] - 5, 5)
+Border(5, 40, size[0] - 5, 40)
 Border(5, size[1] - 5, size[0] - 5, size[1] - 5)
-Border(5, 5, 5, size[1] - 5)
-Border(size[0] - 5, 5, size[0] - 5, size[1] - 5)
+Border(5, 40, 5, size[1] - 5)
+Border(size[0] - 5, 40, size[0] - 5, size[1] - 5)
+health = []
+x, y = 10, 10
+for _ in range(10):
+    health.append(Health((x, y)))
+    x += 30
 pygame.display.flip()
 fps = 60  # количество кадров в секунду
 clock = pygame.time.Clock()
@@ -83,10 +108,11 @@ while gaming:
         player.update((-player_speed, 0))
     if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
         player.update((player_speed, 0))
+    if keys[pygame.K_DELETE]:
+        health[-1].update(0)
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             gaming = False
-        
 
     screen.fill(pygame.Color('WHITE'))
     all_sprites.draw(screen)
