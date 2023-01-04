@@ -29,17 +29,19 @@ class Player(pygame.sprite.Sprite):
         self.last_move = [0, 0]
 
     def update(self, new_pos):
-        if not pygame.sprite.spritecollideany(self, vertical_borders):
-            self.rect.x += new_pos[0]
-            self.last_move = new_pos
-        else:
-            self.rect.x -= self.last_move[0]
-        if not pygame.sprite.spritecollideany(self, horizontal_borders):
-            self.rect.y += new_pos[1]
-            self.last_move = new_pos
-        else:
-            self.rect.y -= self.last_move[1]
         print(self.last_move)
+        if new_pos[1] != 0:
+            if not pygame.sprite.spritecollideany(self, horizontal_borders):
+                self.rect.y += new_pos[1]
+                self.last_move[1] = new_pos[1]
+            else:
+                self.rect.y -= self.last_move[1]
+        if new_pos[0] != 0:
+            if not pygame.sprite.spritecollideany(self, vertical_borders):
+                self.rect.x += new_pos[0]
+                self.last_move[0] = new_pos[0]
+            else:
+                self.rect.x -= self.last_move[0]
 
 
 class Health(pygame.sprite.Sprite):
