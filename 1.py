@@ -50,9 +50,6 @@ class Health(pygame.sprite.Sprite):
         self.rect.x = pos[0]
         self.rect.y = pos[1]
 
-    def down(self):
-        all_sprites.remove()
-
     def update(self, action):
         if action == 1 and 1 <= len(health) <= 9:  # здесь будет какая-то хилка
             health.append(Health((health[-1].rect.x + 30, 10)))
