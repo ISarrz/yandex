@@ -51,14 +51,17 @@ class Health(pygame.sprite.Sprite):
         self.rect.y = pos[1]
 
     def down(self):
-        del self
+        all_sprites.remove()
 
     def update(self, action):
-        if action == 1: #здесь будет какая-то хилка
-            health.append(Health((health[-1].rect.x + 10, 10)))
-        else:
-            health[-1].down()
-
+        if action == 1 and 1 <= len(health) <= 9:  # здесь будет какая-то хилка
+            health.append(Health((health[-1].rect.x + 30, 10)))
+        if action == 0 and len(health) >= 1:
+            delet = health.pop(-1)
+            all_sprites.remove(delet)
+        if len(health) == 0:
+            return 0
+        return 1
 
 
 class Border(pygame.sprite.Sprite):
@@ -93,6 +96,7 @@ x, y = 10, 10
 for _ in range(10):
     health.append(Health((x, y)))
     x += 30
+print(health)
 pygame.display.flip()
 fps = 60  # количество кадров в секунду
 clock = pygame.time.Clock()
@@ -108,11 +112,14 @@ while gaming:
         player.update((-player_speed, 0))
     if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
         player.update((player_speed, 0))
-    if keys[pygame.K_DELETE]:
-        health[-1].update(0)
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             gaming = False
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_MINUS:
+                gaming = health[-1].update(0)
+            if event.key == pygame.K_EQUALS:
+                gaming = health[-1].update(1)
 
     screen.fill(pygame.Color('WHITE'))
     all_sprites.draw(screen)
