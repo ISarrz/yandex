@@ -22,14 +22,15 @@ def load_image(name, colorkey=-1):
 class Player(pygame.sprite.Sprite):
     def __init__(self, group, pos):
         super().__init__(group)
-        self.image = load_image("player_1.png")
+        self.image = load_image("player_right.png")
         self.rect = self.image.get_rect()
         self.rect.x = pos[0]
         self.rect.y = pos[1]
         self.last_move = [0, 0]
 
     def update(self, new_pos):
-        print(self.last_move)
+        if self.last_move[0] != new_pos[0] or self.last_move[1] != new_pos[1]:
+            self.change_image(new_pos)
         if new_pos[1] != 0:
             if not pygame.sprite.spritecollideany(self, horizontal_borders):
                 self.rect.y += new_pos[1]
@@ -42,6 +43,26 @@ class Player(pygame.sprite.Sprite):
                 self.last_move[0] = new_pos[0]
             else:
                 self.rect.x -= self.last_move[0]
+
+
+    def change_image(self, new_pos):
+        if new_pos[0] > 0:
+            self.image = load_image('player_right.png')
+        if new_pos[0] < 0:
+            self.image = load_image('player_left.png')
+        if new_pos[1] > 0:
+            self.image = load_image('player_down.png')
+        if new_pos[1] < 0:
+            self.image = load_image('player_up.png')
+        x = self.rect.x
+        y = self.rect.y
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+
+
+    #def strike(self, position):
+
 
 
 class Health(pygame.sprite.Sprite):
@@ -77,7 +98,7 @@ class Border(pygame.sprite.Sprite):
 
 
 pygame.init()
-size = (500, 500)
+size = (1000, 1000)
 gaming = True
 screen = pygame.display.set_mode(size)
 screen.fill(pygame.Color('WHITE'))
@@ -119,6 +140,12 @@ while gaming:
                 gaming = health[-1].update(0)
             if event.key == pygame.K_EQUALS:
                 gaming = health[-1].update(1)
+        """if event.type == pygame.MOUSEBUTTONDOWN:
+            if event.btn == pygame.BUTTON_LEFT:
+                pos = event.pos
+                if pos
+                player.strike()
+                """
 
     screen.fill(pygame.Color('WHITE'))
     all_sprites.draw(screen)
