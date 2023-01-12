@@ -151,15 +151,7 @@ class Enemy(pygame.sprite.Sprite):
         delta_y = player_y - self.rect.centery
         dist = sqrt(delta_x ** 2 +  delta_y ** 2)
         if self.last_pos == self.rect.center:
-            x = random.randint(1, 4)
-            if x == 1:
-                speed_x = 10
-            elif x == 2:
-                speed_x = -10 
-            elif x == 3:
-                speed_y = -10
-            elif x == 4:
-                speed_y = 10 
+            pass
         else:
             self.last_pos = self.rect.center
 
