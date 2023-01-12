@@ -40,9 +40,7 @@ class Player(pygame.sprite.Sprite):
     def update(self, new_pos):
         if self.last_move2[0] != new_pos[0] or self.last_move2[1] != new_pos[1]:
             self.change_image_for_moving(new_pos)
-            print('no')
         else:
-            print('ok')
             self.animation_moving()
         if new_pos[1] != 0:
             if not pygame.sprite.spritecollideany(self, horizontal_borders):
@@ -127,7 +125,6 @@ class Shooting(pygame.sprite.Sprite):
         self.where = where
 
     def update(self):
-        print(self.rect.center)
         if not pygame.sprite.spritecollideany(self, horizontal_borders) and not pygame.sprite.spritecollideany(self, vertical_borders):
             self.rect.x += self.where[0]
             self.rect.y += self.where[1]
@@ -192,7 +189,6 @@ x, y = 10, 10
 for _ in range(10):
     health.append(Health((x, y)))
     x += 30
-print(health)
 pygame.display.flip()
 fps = 110  # количество кадров в секунду
 clock = pygame.time.Clock()
