@@ -139,6 +139,8 @@ class Enemy(pygame.sprite.Sprite):
             'left': ['enemy\enemy_left1.png', 'enemy\enemy_left2.png']
         }
 
+        self.health = 3
+
 
     def __call__(self, tick, player_pos):
         player_x = player_pos[0]
@@ -160,6 +162,17 @@ class Enemy(pygame.sprite.Sprite):
             speed_x = delta_x / time
             speed_y = delta_y / time
             self.update((speed_x, speed_y))
+    """
+    def check_on_shooting(self):
+        if self.health:
+            if pygame.sprite.spritecollideany(self, pulya_group):
+                print('ok')
+                self.health -= 1
+        else:
+            delet = bots.pop(bots.index(self))
+            all_sprites.remove(delet)
+            bots_group.remove(delet)
+            """
 
 
     def update(self, new_pos):
@@ -240,7 +253,6 @@ class Enemy(pygame.sprite.Sprite):
         speed_x = delta_x / time
         speed_y = delta_y / time
         return speed_x, speed_y
-       
 
 
 class Shooting(pygame.sprite.Sprite):
@@ -264,6 +276,19 @@ class Shooting(pygame.sprite.Sprite):
                 delet = pulya.pop(pulya.index(self))
                 all_sprites.remove(delet)
                 pulya_group.remove(delet)
+        else:
+            who = pygame.sprite.spritecollideany(self, bots_group)
+            if who:
+                if who.health:
+                    print('ok')
+                    who.health -= 1
+                    delet = pulya.pop(pulya.index(self))
+                    all_sprites.remove(delet)
+                    pulya_group.remove(delet)
+                if who.health == 0:
+                    delet = bots.pop(bots.index(who))
+                    all_sprites.remove(delet)
+                    bots_group.remove(delet)
 
                 
         if not pygame.sprite.spritecollideany(self, horizontal_borders) and not pygame.sprite.spritecollideany(self, vertical_borders):
@@ -373,9 +398,10 @@ player = Player(all_sprites, (40, 50))
 player_group.add(player)
 
 # Боты
-
 enemy = Enemy(all_sprites, (500, 500))
 bots = []
+bots_group = pygame.sprite.Group()
+bots_group.add(enemy)
 bots.append(enemy)
 all_sprites.draw(screen)
 
@@ -444,7 +470,6 @@ while gaming:
     for event in pygame.event.get():
         if event.type == pygame.QUIT or len(health) == 0:
             gaming = False
-
 
     pulya_group.update()
     screen.fill(pygame.Color('WHITE'))
