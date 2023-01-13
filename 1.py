@@ -4,6 +4,8 @@ import sys
 from math import sqrt
 import random
 
+
+bots = []
 def load_image(name, colorkey=-1):
     fullname = os.path.join('data', name)
     if not os.path.isfile(fullname):
@@ -23,7 +25,7 @@ def load_image(name, colorkey=-1):
 class Player(pygame.sprite.Sprite):
     def __init__(self, group, pos):
         super().__init__(group)
-        self.image = load_image("player_right1.png")
+        self.image = load_image("player_right1.png", 1)
         self.rect = self.image.get_rect()
         self.rect.x = pos[0]
         self.cooldown = 500
@@ -38,26 +40,28 @@ class Player(pygame.sprite.Sprite):
             'right': ['player_right1.png', 'player_right2.png'],
             'left': ['player_left1.png', 'player_left2.png']
         }
+        self.mask = pygame.mask.from_surface(self.image)
 
     def update(self, new_pos):
-        if self.last_move2[0] != new_pos[0] or self.last_move2[1] != new_pos[1]:
-            self.change_image_for_moving(new_pos)
-        else:
-            self.animation_moving()
-        if new_pos[1] != 0:
-            if not pygame.sprite.spritecollideany(self, horizontal_borders):
-                self.rect.y += new_pos[1]
-                self.last_move[1] = new_pos[1]
-                self.last_move2 = new_pos
+        if not pygame.sprite.collide_mask(self, wall_group):
+            if self.last_move2[0] != new_pos[0] or self.last_move2[1] != new_pos[1]:
+                self.change_image_for_moving(new_pos)
             else:
-                self.rect.y -= self.last_move[1]
-        if new_pos[0] != 0:
-            if not pygame.sprite.spritecollideany(self, vertical_borders):
-                self.rect.x += new_pos[0]
-                self.last_move[0] = new_pos[0]
-                self.last_move2 = new_pos
-            else:
-                self.rect.x -= self.last_move[0]
+                self.animation_moving()
+            if new_pos[1] != 0:
+                if not pygame.sprite.spritecollideany(self, horizontal_borders):
+                    self.rect.y += new_pos[1]
+                    self.last_move[1] = new_pos[1]
+                    self.last_move2 = new_pos
+                else:
+                    self.rect.y -= self.last_move[1]
+            if new_pos[0] != 0:
+                if not pygame.sprite.spritecollideany(self, vertical_borders):
+                    self.rect.x += new_pos[0]
+                    self.last_move[0] = new_pos[0]
+                    self.last_move2 = new_pos
+                else:
+                    self.rect.x -= self.last_move[0]
 
     def animation_stop(self):
         if self.now_image[0] == 'left':
@@ -261,9 +265,6 @@ class Shooting(pygame.sprite.Sprite):
             all_sprites.remove(delet)
             pulya_group.remove(delet)
 
-
-
-
 class Health(pygame.sprite.Sprite):
     def __init__(self, pos):
         super().__init__(all_sprites)
@@ -282,6 +283,19 @@ class Health(pygame.sprite.Sprite):
             return 0
         return 1
 
+    class Camera:
+        def __init__(self):
+            self.dx = 0
+            self.dy = 0
+
+        def apply(self, obj):
+            obj.rect.x += self.dx
+            obj.rect.y += self.dy
+
+        def update(self, target):
+            self.dx = -(target.rect.x + target.rect.w // 2)
+            self.dy = -(target.rect.y + target.rect.h // 2)
+
 
 class Border(pygame.sprite.Sprite):
     def __init__(self, x1, y1, x2, y2):
@@ -297,25 +311,65 @@ class Border(pygame.sprite.Sprite):
 
 
 
+tile_width = tile_height = 18
+
+wall_group = pygame.sprite.Group()
+class Tile(pygame.sprite.Sprite):
+    def __init__(self, tile_type, pos_x, pos_y):
+        self.tile_images = {
+            'wall': load_image('wall.png', 1),
+            'empty': load_image('empty.png')
+        }
+        super().__init__(all_sprites)
+        self.image = self.tile_images[tile_type]
+        self.rect = self.image.get_rect().move(
+            tile_width * pos_x, tile_height * pos_y)
+        self.mask = pygame.mask.from_surface(self.image)
+
+
+def load_level(filename):
+    filename = "data/" + filename
+    with open(filename, 'r') as mapFile:
+        level_map = [line.strip() for line in mapFile]
+    max_width = max(map(len, level_map))
+    return list(map(lambda x: x.ljust(max_width, '.'), level_map))
+
+def generate_level(level):
+    a, b = None, None
+    for y in range(len(level)):
+        for x in range(len(level[y])):
+            if level[y][x] == '.':
+                pass
+                #Tile('empty', x, y)
+            elif level[y][x] == '#':
+                wall_group.add(Tile('wall', x, y))
+            elif level[y][x] == '@':
+                # Tile('empty', x, y)
+                a, b = x, y
+            elif level[y][x] == 'x':
+                # Tile('empty', x, y)
+                bots.append(Enemy(all_sprites, (x * tile_width, y * tile_height)))
+    return a * tile_width, b * tile_height
+
 
 pygame.init()
-size = (1000, 1000)
+size = (889, 640)
 gaming = True
 screen = pygame.display.set_mode(size)
-screen.fill(pygame.Color('WHITE'))
+screen.fill(pygame.Color('BLACK'))
 
 all_sprites = pygame.sprite.Group()
-
 # Игрок
 health = []
-player = Player(all_sprites, (40, 50))
+
 
 # Боты
 
 enemy = Enemy(all_sprites, (500, 500))
-bots = []
 bots.append(enemy)
 all_sprites.draw(screen)
+
+player = Player(all_sprites, generate_level(load_level('level_1.txt')))
 
 # Стены
 
@@ -339,13 +393,12 @@ clock = pygame.time.Clock()
 cont = False
 player_speed = 3
 
-
 shoot_tick = 0
 
 
 while gaming:
-    
-    
+
+
     keys = pygame.key.get_pressed()
     mouse = pygame.mouse.get_pos()
     click = pygame.mouse.get_pressed()
@@ -389,7 +442,7 @@ while gaming:
                 gaming = health[-1].update(1)
 
     pulya_group.update()
-    screen.fill(pygame.Color('WHITE'))
+    screen.fill(pygame.Color('BLACK'))
     all_sprites.draw(screen)
     pygame.display.flip()
     clock.tick(fps)
