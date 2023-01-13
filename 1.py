@@ -308,7 +308,48 @@ class Border(pygame.sprite.Sprite):
             self.image = pygame.Surface([x2 - x1, 1])
             self.rect = pygame.Rect(x1, y1, x2 - x1, 1)
 
+class Menu:
+    def __init__(self, window, punkts) -> None:
+        self.punkts = punkts
+        self.window = window
 
+    def render(self, poverhnost, font, num_punkt):
+        for i in self.punkts:
+            if num_punkt == i[5]:
+                poverhnost.blit(font.render(i[2], True, (222, 27, 27)), (i[0], i[1]))
+            else:
+                poverhnost.blit(font.render(i[2], True, i[3]), (i[0], i[1]))
+    def menu(self):
+        done = True
+        
+        font_menu = pygame.font.Font('fonts/Purisa.ttf', 60)
+        punkt = 0
+        while done:
+            screen.fill((66, 62, 62))
+            mp = pygame.mouse.get_pos()
+            for i in self.punkts:
+                if mp[0] > i[0] and mp[0] < i[0] + 155 and mp[1] > i[1] and mp[1] < i[1] + 50:
+                    punkt = i[5]
+            self.render(screen, font_menu, punkt)
+            for e in pygame.event.get():
+                if e.type == pygame.QUIT:
+                    sys.exit()
+            for e in pygame.key.get_pressed():
+                if e == pygame.K_ESCAPE:
+                    sys.exit()
+                if e == pygame.K_UP:
+                    if punkt > 0:
+                        punkt -= 1
+                if e == pygame.K_DOWN:
+                    if punkt < len(self.punkts) - 1:
+                        punkt += 1
+                if pygame.mouse.get_pressed()[0]:
+                    if punkt == 0:
+                        done = False
+                    elif punkt == 2:
+                        sys.exit()
+            self.window.blit(screen, (0, 0))
+            pygame.display.flip()
 
 
 pygame.init()
@@ -318,6 +359,12 @@ screen = pygame.display.set_mode(size)
 screen.fill(pygame.Color('WHITE'))
 
 all_sprites = pygame.sprite.Group()
+# Меню
+punkts = [(400, 250, u'Game', (255, 255, 255), (250, 30, 2530), 0),
+          (340, 400, u'Statisticks', (255, 255, 255), (250, 30, 2530), 1),
+          (400, 550, u'Quit', (250, 250, 30), (250, 30, 2530), 2)]
+game = Menu(punkts=punkts, window=screen)
+game.menu()
 
 # Игрок
 health = []
