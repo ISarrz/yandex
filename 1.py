@@ -253,6 +253,11 @@ class Shooting(pygame.sprite.Sprite):
         self.where = where
 
     def update(self):
+        if pygame.sprite.spritecollideany(self, player_group):
+            health[-1].update(0)
+            delet = pulya.pop(pulya.index(self))
+            all_sprites.remove(delet)
+            pulya_group.remove(delet)
         if not pygame.sprite.spritecollideany(self, horizontal_borders) and not pygame.sprite.spritecollideany(self, vertical_borders):
             self.rect.x += self.where[0]
             self.rect.y += self.where[1]
@@ -308,7 +313,9 @@ all_sprites = pygame.sprite.Group()
 
 # Игрок
 health = []
+player_group = pygame.sprite.Group()
 player = Player(all_sprites, (40, 50))
+player_group.add(player)
 
 # Боты
 
@@ -380,13 +387,9 @@ while gaming:
     if check:
         player.animation_stop()
     for event in pygame.event.get():
-        if event.type == pygame.QUIT:
+        if event.type == pygame.QUIT or len(health) == 0:
             gaming = False
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_MINUS:
-                gaming = health[-1].update(0)
-            if event.key == pygame.K_EQUALS:
-                gaming = health[-1].update(1)
+
 
     pulya_group.update()
     screen.fill(pygame.Color('WHITE'))
