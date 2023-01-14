@@ -43,25 +43,24 @@ class Player(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
 
     def update(self, new_pos):
-        if not pygame.sprite.collide_mask(self, wall_group):
-            if self.last_move2[0] != new_pos[0] or self.last_move2[1] != new_pos[1]:
-                self.change_image_for_moving(new_pos)
+        if self.last_move2[0] != new_pos[0] or self.last_move2[1] != new_pos[1]:
+            self.change_image_for_moving(new_pos)
+        else:
+            self.animation_moving()
+        if new_pos[1] != 0:
+            if not pygame.sprite.spritecollideany(self, horizontal_borders):
+                self.rect.y += new_pos[1]
+                self.last_move[1] = new_pos[1]
+                self.last_move2 = new_pos
             else:
-                self.animation_moving()
-            if new_pos[1] != 0:
-                if not pygame.sprite.spritecollideany(self, horizontal_borders):
-                    self.rect.y += new_pos[1]
-                    self.last_move[1] = new_pos[1]
-                    self.last_move2 = new_pos
-                else:
-                    self.rect.y -= self.last_move[1]
-            if new_pos[0] != 0:
-                if not pygame.sprite.spritecollideany(self, vertical_borders):
-                    self.rect.x += new_pos[0]
-                    self.last_move[0] = new_pos[0]
-                    self.last_move2 = new_pos
-                else:
-                    self.rect.x -= self.last_move[0]
+                self.rect.y -= self.last_move[1]
+        if new_pos[0] != 0:
+            if not pygame.sprite.spritecollideany(self, vertical_borders):
+                self.rect.x += new_pos[0]
+                self.last_move[0] = new_pos[0]
+                self.last_move2 = new_pos
+            else:
+                self.rect.x -= self.last_move[0]
 
     def animation_stop(self):
         if self.now_image[0] == 'left':
@@ -106,7 +105,7 @@ class Player(pygame.sprite.Sprite):
         self.rect.y = y
 
     def strike(self, speed):
-        pulya.append(Shooting(all_sprites, (self.rect.x, self.rect.y), (speed[0], speed[1])))
+        pulya.append(Shooting(all_sprites, (self.rect.x, self.rect.y), (speed[0], speed[1]), player=True))
         pulya_group.add(pulya[-1])
 
     def find_path(self, dest):
@@ -124,7 +123,7 @@ class Enemy(pygame.sprite.Sprite):
     def __init__(self, group, pos):
         super().__init__(group)
         self.speed = 4
-        self.image = load_image("player_right1.png")
+        self.image = load_image("enemy\enemy_right1.png")
         self.rect = self.image.get_rect()
         self.rect.x = pos[0]
         self.cooldown = 700
@@ -135,13 +134,15 @@ class Enemy(pygame.sprite.Sprite):
         self.last_move2 = [0, 0]
         self.speed_shooting = 10
         self.last_pos = self.rect.center
-        self.now_image = ['right', 'player_right1.png']
+        self.now_image = ['right', 'enemy\enemy_right1.png']
         self.images = {
-            'down': ['player_down1.png', 'player_down2.png'],
-            'up': ['player_up1.png', 'player_up2.png'],
-            'right': ['player_right1.png', 'player_right2.png'],
-            'left': ['player_left1.png', 'player_left2.png']
+            'down': ['enemy\enemy_down1.png', 'enemy\enemy_down2.png'],
+            'up': ['enemy\enemy_up1.png', 'enemy\enemy_up2.png'],
+            'right': ['enemy\enemy_right1.png', 'enemy\enemy_right2.png'],
+            'left': ['enemy\enemy_left1.png', 'enemy\enemy_left2.png']
         }
+
+        self.health = 3
 
 
     def __call__(self, tick, player_pos):
@@ -190,13 +191,13 @@ class Enemy(pygame.sprite.Sprite):
 
     def animation_stop(self):
         if self.now_image[0] == 'left':
-            self.image = load_image('player_left.png')
+            self.image = load_image('enemy\enemy_left.png')
         if self.now_image[0] == 'right':
-            self.image = load_image('player_right.png')
+            self.image = load_image('enemy\enemy_right.png')
         if self.now_image[0] == 'down':
-            self.image = load_image('player_down.png')
+            self.image = load_image('enemy\enemy_down.png')
         if self.now_image[0] == 'up':
-            self.image = load_image('player_up.png')
+            self.image = load_image('enemy\enemy_up.png')
 
     def animation_moving(self):
         if self.now_image[1][-5] == '2':
@@ -213,17 +214,17 @@ class Enemy(pygame.sprite.Sprite):
 
     def change_image_for_moving(self, new_pos):
         if new_pos[0] > 0:
-            self.image = load_image('player_right1.png')
-            self.now_image = ['right', 'player_right1.png']
+            self.image = load_image('enemy\enemy_right1.png')
+            self.now_image = ['right', 'enemy\enemy_right1.png']
         if new_pos[0] < 0:
-            self.image = load_image('player_left1.png')
-            self.now_image = ['left', 'player_left1.png']
+            self.image = load_image('enemy\enemy_left1.png')
+            self.now_image = ['left', 'enemy\enemy_left1.png']
         if new_pos[1] > 0:
-            self.image = load_image('player_down1.png')
-            self.now_image = ['down', 'player_down1.png']
+            self.image = load_image('enemy\enemy_down1.png')
+            self.now_image = ['down', 'enemy\enemy_down1.png']
         if new_pos[1] < 0:
-            self.image = load_image('player_up1.png')
-            self.now_image = ['up', 'player_up1.png']
+            self.image = load_image('enemy\enemy_up1.png')
+            self.now_image = ['up', 'enemy\enemy_up1.png']
         x = self.rect.x
         y = self.rect.y
         self.rect = self.image.get_rect()
@@ -231,7 +232,7 @@ class Enemy(pygame.sprite.Sprite):
         self.rect.y = y
 
     def strike(self, speed):
-        pulya.append(Shooting(all_sprites, (self.rect.x, self.rect.y), (speed[0], speed[1])))
+        pulya.append(Shooting(all_sprites, (self.rect.x, self.rect.y), (speed[0], speed[1]), player=False))
         pulya_group.add(pulya[-1])
 
     def find_path(self, dest):
@@ -244,19 +245,44 @@ class Enemy(pygame.sprite.Sprite):
         speed_x = delta_x / time
         speed_y = delta_y / time
         return speed_x, speed_y
-       
 
 
 class Shooting(pygame.sprite.Sprite):
-    def __init__(self, group, pos, where):
+    def __init__(self, group, pos, where, player):
         super().__init__(group)
         self.image = load_image('pulya.png')
         self.rect = self.image.get_rect()
         self.rect.x = pos[0]
+        self.player = player
         self.rect.y = pos[1] + 20
         self.where = where
 
     def update(self):
+        if not self.player:
+            if pygame.sprite.spritecollideany(self, player_group):
+                if health:
+                    health[-1].update(0)
+                else:
+                    pygame.quit()
+
+                delet = pulya.pop(pulya.index(self))
+                all_sprites.remove(delet)
+                pulya_group.remove(delet)
+        else:
+            who = pygame.sprite.spritecollideany(self, bots_group)
+            if who:
+                if who.health:
+                    print('ok')
+                    who.health -= 1
+                    delet = pulya.pop(pulya.index(self))
+                    all_sprites.remove(delet)
+                    pulya_group.remove(delet)
+                if who.health == 0:
+                    delet = bots.pop(bots.index(who))
+                    all_sprites.remove(delet)
+                    bots_group.remove(delet)
+
+
         if not pygame.sprite.spritecollideany(self, horizontal_borders) and not pygame.sprite.spritecollideany(self, vertical_borders):
             self.rect.x += self.where[0]
             self.rect.y += self.where[1]
@@ -264,6 +290,9 @@ class Shooting(pygame.sprite.Sprite):
             delet = pulya.pop(pulya.index(self))
             all_sprites.remove(delet)
             pulya_group.remove(delet)
+
+
+
 
 class Health(pygame.sprite.Sprite):
     def __init__(self, pos):
@@ -359,17 +388,23 @@ screen = pygame.display.set_mode(size)
 screen.fill(pygame.Color('BLACK'))
 
 all_sprites = pygame.sprite.Group()
+
 # Игрок
 health = []
-
+player = Player(all_sprites, generate_level(load_level('level_1.txt')))
+player_group = pygame.sprite.Group()
+player_group.add(player)
 
 # Боты
 
 enemy = Enemy(all_sprites, (500, 500))
+bots = []
+bots_group = pygame.sprite.Group()
+bots_group.add(enemy)
 bots.append(enemy)
 all_sprites.draw(screen)
 
-player = Player(all_sprites, generate_level(load_level('level_1.txt')))
+
 
 # Стены
 
@@ -393,12 +428,13 @@ clock = pygame.time.Clock()
 cont = False
 player_speed = 3
 
+
 shoot_tick = 0
 
 
 while gaming:
-
-
+    
+    
     keys = pygame.key.get_pressed()
     mouse = pygame.mouse.get_pos()
     click = pygame.mouse.get_pressed()
@@ -433,13 +469,8 @@ while gaming:
     if check:
         player.animation_stop()
     for event in pygame.event.get():
-        if event.type == pygame.QUIT:
+        if event.type == pygame.QUIT or len(health) == 0:
             gaming = False
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_MINUS:
-                gaming = health[-1].update(0)
-            if event.key == pygame.K_EQUALS:
-                gaming = health[-1].update(1)
 
     pulya_group.update()
     screen.fill(pygame.Color('BLACK'))
