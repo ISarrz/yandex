@@ -4,8 +4,9 @@ import sys
 from math import sqrt
 import random
 
-
 bots = []
+
+
 def load_image(name, colorkey=-1):
     fullname = os.path.join('data', name)
     if not os.path.isfile(fullname):
@@ -48,14 +49,16 @@ class Player(pygame.sprite.Sprite):
         else:
             self.animation_moving()
         if new_pos[1] != 0:
-            if not pygame.sprite.spritecollideany(self, horizontal_borders):
+            if not pygame.sprite.spritecollideany(self, wall_group) and not pygame.sprite.spritecollideany(self,
+                                                                                                           horizontal_borders):
                 self.rect.y += new_pos[1]
                 self.last_move[1] = new_pos[1]
                 self.last_move2 = new_pos
             else:
                 self.rect.y -= self.last_move[1]
         if new_pos[0] != 0:
-            if not pygame.sprite.spritecollideany(self, vertical_borders):
+            if not pygame.sprite.spritecollideany(self, wall_group) and not pygame.sprite.spritecollideany(self,
+                                                                                                           vertical_borders):
                 self.rect.x += new_pos[0]
                 self.last_move[0] = new_pos[0]
                 self.last_move2 = new_pos
@@ -112,7 +115,7 @@ class Player(pygame.sprite.Sprite):
         dest_x, dest_y = dest[0], dest[1]
         delta_x = dest_x - self.rect.centerx
         delta_y = dest_y - self.rect.centery
-        dist = sqrt(delta_x ** 2 +  delta_y ** 2)
+        dist = sqrt(delta_x ** 2 + delta_y ** 2)
         time = dist / self.speed_shooting
         speed_x = delta_x / time
         speed_y = delta_y / time
@@ -144,17 +147,16 @@ class Enemy(pygame.sprite.Sprite):
 
         self.health = 3
 
-
     def __call__(self, tick, player_pos):
         player_x = player_pos[0]
         player_y = player_pos[1]
         if tick - self.last_tick > self.cooldown:
             self.strike(self.find_path(player_pos))
             self.last_tick = tick
-        
+
         delta_x = player_x - self.rect.centerx
         delta_y = player_y - self.rect.centery
-        dist = sqrt(delta_x ** 2 +  delta_y ** 2)
+        dist = sqrt(delta_x ** 2 + delta_y ** 2)
         if self.last_pos == self.rect.center:
             pass
         else:
@@ -166,14 +168,14 @@ class Enemy(pygame.sprite.Sprite):
             speed_y = delta_y / time
             self.update((speed_x, speed_y))
 
-
     def update(self, new_pos):
         if self.last_move2[0] != new_pos[0] or self.last_move2[1] != new_pos[1]:
             self.change_image_for_moving(new_pos)
         else:
             self.animation_moving()
         if new_pos[1] != 0:
-            if not pygame.sprite.spritecollideany(self, horizontal_borders):
+            if not pygame.sprite.spritecollideany(self, wall_group) and not pygame.sprite.spritecollideany(self,
+                                                                                                           horizontal_borders):
                 self.rect.y += new_pos[1]
                 self.last_move[1] = new_pos[1]
                 self.last_move2 = new_pos
@@ -181,7 +183,8 @@ class Enemy(pygame.sprite.Sprite):
             else:
                 self.rect.y -= self.last_move[1]
         if new_pos[0] != 0:
-            if not pygame.sprite.spritecollideany(self, vertical_borders):
+            if not pygame.sprite.spritecollideany(self, wall_group) and not pygame.sprite.spritecollideany(self,
+                                                                                                           horizontal_borders):
                 self.rect.x += new_pos[0]
                 self.last_move[0] = new_pos[0]
                 self.last_move2 = new_pos
@@ -240,7 +243,7 @@ class Enemy(pygame.sprite.Sprite):
         dest_y = dest[1]
         delta_x = dest_x - self.rect.centerx
         delta_y = dest_y - self.rect.centery
-        dist = sqrt(delta_x ** 2 +  delta_y ** 2)
+        dist = sqrt(delta_x ** 2 + delta_y ** 2)
         time = dist / self.speed_shooting
         speed_x = delta_x / time
         speed_y = delta_y / time
@@ -268,6 +271,10 @@ class Shooting(pygame.sprite.Sprite):
                 delet = pulya.pop(pulya.index(self))
                 all_sprites.remove(delet)
                 pulya_group.remove(delet)
+            if pygame.sprite.spritecollideany(self, wall_group):
+                delet = pulya.pop(pulya.index(self))
+                all_sprites.remove(delet)
+                pulya_group.remove(delet)
         else:
             who = pygame.sprite.spritecollideany(self, bots_group)
             if who:
@@ -282,16 +289,14 @@ class Shooting(pygame.sprite.Sprite):
                     all_sprites.remove(delet)
                     bots_group.remove(delet)
 
-
-        if not pygame.sprite.spritecollideany(self, horizontal_borders) and not pygame.sprite.spritecollideany(self, vertical_borders):
+        if not pygame.sprite.spritecollideany(self, horizontal_borders) and not pygame.sprite.spritecollideany(self,
+                                                                                                               vertical_borders):
             self.rect.x += self.where[0]
             self.rect.y += self.where[1]
         else:
             delet = pulya.pop(pulya.index(self))
             all_sprites.remove(delet)
             pulya_group.remove(delet)
-
-
 
 
 class Health(pygame.sprite.Sprite):
@@ -339,10 +344,11 @@ class Border(pygame.sprite.Sprite):
             self.rect = pygame.Rect(x1, y1, x2 - x1, 1)
 
 
-
 tile_width = tile_height = 18
 
 wall_group = pygame.sprite.Group()
+
+
 class Tile(pygame.sprite.Sprite):
     def __init__(self, tile_type, pos_x, pos_y):
         self.tile_images = {
@@ -353,7 +359,6 @@ class Tile(pygame.sprite.Sprite):
         self.image = self.tile_images[tile_type]
         self.rect = self.image.get_rect().move(
             tile_width * pos_x, tile_height * pos_y)
-        self.mask = pygame.mask.from_surface(self.image)
 
 
 def load_level(filename):
@@ -363,13 +368,17 @@ def load_level(filename):
     max_width = max(map(len, level_map))
     return list(map(lambda x: x.ljust(max_width, '.'), level_map))
 
+
+bots_group = pygame.sprite.Group()
+
+
 def generate_level(level):
     a, b = None, None
     for y in range(len(level)):
         for x in range(len(level[y])):
             if level[y][x] == '.':
                 pass
-                #Tile('empty', x, y)
+                # Tile('empty', x, y)
             elif level[y][x] == '#':
                 wall_group.add(Tile('wall', x, y))
             elif level[y][x] == '@':
@@ -378,6 +387,7 @@ def generate_level(level):
             elif level[y][x] == 'x':
                 # Tile('empty', x, y)
                 bots.append(Enemy(all_sprites, (x * tile_width, y * tile_height)))
+                bots_group.add(bots[-1])
     return a * tile_width, b * tile_height
 
 
@@ -397,14 +407,7 @@ player_group.add(player)
 
 # Боты
 
-enemy = Enemy(all_sprites, (500, 500))
-bots = []
-bots_group = pygame.sprite.Group()
-bots_group.add(enemy)
-bots.append(enemy)
 all_sprites.draw(screen)
-
-
 
 # Стены
 
@@ -414,7 +417,6 @@ Border(5, 40, size[0] - 5, 40)
 Border(5, size[1] - 5, size[0] - 5, size[1] - 5)
 Border(5, 40, 5, size[1] - 5)
 Border(size[0] - 5, 40, size[0] - 5, size[1] - 5)
-
 
 pulya_group = pygame.sprite.Group()
 pulya = []
@@ -428,13 +430,10 @@ clock = pygame.time.Clock()
 cont = False
 player_speed = 3
 
-
 shoot_tick = 0
 
-
 while gaming:
-    
-    
+
     keys = pygame.key.get_pressed()
     mouse = pygame.mouse.get_pos()
     click = pygame.mouse.get_pressed()
@@ -444,9 +443,6 @@ while gaming:
     # Боты
     for i in bots:
         i(now_tick, player.rect.center)
-
-       
-        
 
     # Игрок
 
