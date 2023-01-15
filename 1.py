@@ -26,7 +26,7 @@ def load_image(name, colorkey=-1):
 class Player(pygame.sprite.Sprite):
     def __init__(self, group, pos):
         super().__init__(group)
-        self.image = load_image("player_right1.png", 1)
+        self.image = load_image("player_left1.png", -1)
         self.rect = self.image.get_rect()
         self.rect.x = pos[0]
         self.cooldown = 500
@@ -41,21 +41,26 @@ class Player(pygame.sprite.Sprite):
             'right': ['player_right1.png', 'player_right2.png'],
             'left': ['player_left1.png', 'player_left2.png']
         }
-        self.mask = pygame.mask.from_surface(self.image)
+        self.last_pos = [pos[0], pos[1]]
+        print(pos)
 
-    def collide_x(self):
-        if pygame.sprite.spritecollideany(self, wall_group):
-            self.rect.x += 3
-        if pygame.sprite.spritecollideany(self, wall_group):
-            self.rect.x -= 6
 
-    def collide_y(self):
-        if pygame.sprite.spritecollideany(self, wall_group) or pygame.sprite.spritecollideany(self,
-                                                                                              horizontal_borders):
-            self.rect.y += 3
-        if pygame.sprite.spritecollideany(self, wall_group) or pygame.sprite.spritecollideany(self,
-                                                                                                           horizontal_borders):
-            self.rect.y -= 6
+
+    def come_back(self):
+        print('ok')
+        print(self.last_pos, self.rect)
+        self.rect.x = self.last_pos[0]
+        self.rect.y = self.last_pos[1]
+        print(self.rect)
+        pygame.display.flip()
+
+    def check_on_collide(self):
+        if pygame.sprite.spritecollideany(self, wall_group):
+            self.come_back()
+            print('collide')
+        else:
+            self.last_pos = [self.rect.x, self.rect.y]
+            print('change on', self.last_pos)
 
     def update(self, new_pos):
         if self.last_move2[0] != new_pos[0] or self.last_move2[1] != new_pos[1]:
@@ -63,25 +68,16 @@ class Player(pygame.sprite.Sprite):
         else:
             self.animation_moving()
         if new_pos[1] != 0:
-            if not pygame.sprite.spritecollideany(self, wall_group) and not pygame.sprite.spritecollideany(self,
-                                                                                                           horizontal_borders):
+            if not pygame.sprite.spritecollideany(self, wall_group):
                 self.rect.y += new_pos[1]
-                self.last_move[1] = new_pos[1]
-                self.last_move2 = new_pos
-            else:
-                self.rect.y -= self.last_move[1]
-                self.collide_x()
+            self.check_on_collide()
+
 
         if new_pos[0] != 0:
-            if not pygame.sprite.spritecollideany(self, wall_group) and not pygame.sprite.spritecollideany(self,
-                                                                                                           vertical_borders):
+            if not pygame.sprite.spritecollideany(self, wall_group):
                 self.rect.x += new_pos[0]
-                self.last_move[0] = new_pos[0]
-                self.last_move2 = new_pos
-            else:
-                self.rect.x -= self.last_move[0]
-                self.collide_y()
 
+            self.check_on_collide()
     def animation_stop(self):
         if self.now_image[0] == 'left':
             self.image = load_image('player_left.png')
@@ -123,6 +119,8 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
+        self.check_on_collide()
+
 
     def strike(self, speed):
         pulya.append(Shooting(all_sprites, (self.rect.x, self.rect.y), (speed[0], speed[1]), player=True))
@@ -283,7 +281,7 @@ class Shooting(pygame.sprite.Sprite):
             if pygame.sprite.spritecollideany(self, player_group):
                 if health:
                     pass
-                    #health[-1].update(0)
+                    # health[-1].update(0)
                 else:
                     pygame.quit()
 
