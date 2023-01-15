@@ -42,9 +42,8 @@ class Player(pygame.sprite.Sprite):
             'left': ['player_left1.png', 'player_left2.png']
         }
         self.last_pos = [pos[0], pos[1]]
+        self.finish = False
         print(pos)
-
-
 
     def come_back(self):
         print('ok')
@@ -55,6 +54,8 @@ class Player(pygame.sprite.Sprite):
         pygame.display.flip()
 
     def check_on_collide(self):
+        if pygame.sprite.spritecollideany(self, exit_group):
+            self.finish = True
         if pygame.sprite.spritecollideany(self, wall_group):
             self.come_back()
             print('collide')
@@ -280,8 +281,7 @@ class Shooting(pygame.sprite.Sprite):
         if not self.player:
             if pygame.sprite.spritecollideany(self, player_group):
                 if health:
-                    pass
-                    # health[-1].update(0)
+                    health[-1].update(0)
                 else:
                     pygame.quit()
 
@@ -309,6 +309,8 @@ class Shooting(pygame.sprite.Sprite):
                     all_sprites.remove(delet)
                     bots_group.remove(delet)
                     check = True
+                if len(bots) == 0:
+                    generate_finish(load_level('level_1.txt'))
 
         if not pygame.sprite.spritecollideany(self, horizontal_borders) and not pygame.sprite.spritecollideany(self,
                                                                                                                vertical_borders):
@@ -366,8 +368,8 @@ class Border(pygame.sprite.Sprite):
             self.rect = pygame.Rect(x1, y1, x2 - x1, 1)
 
 
-tile_width = tile_height = 18
-
+tile_width = tile_height = 30
+exit_group = pygame.sprite.Group()
 wall_group = pygame.sprite.Group()
 
 
@@ -375,7 +377,8 @@ class Tile(pygame.sprite.Sprite):
     def __init__(self, tile_type, pos_x, pos_y):
         self.tile_images = {
             'wall': load_image('wall.png', 1),
-            'empty': load_image('empty.png')
+            'empty': load_image('empty.png', 1),
+            'portal': load_image('portal.png', -1)
         }
         super().__init__(all_sprites)
         self.image = self.tile_images[tile_type]
@@ -399,22 +402,31 @@ def generate_level(level):
     for y in range(len(level)):
         for x in range(len(level[y])):
             if level[y][x] == '.':
-                pass
-                # Tile('empty', x, y)
+                Tile('empty', x, y)
             elif level[y][x] == '#':
                 wall_group.add(Tile('wall', x, y))
             elif level[y][x] == '@':
-                # Tile('empty', x, y)
+                Tile('empty', x, y)
                 a, b = x, y
             elif level[y][x] == 'x':
-                # Tile('empty', x, y)
+                Tile('empty', x, y)
+
+    for y in range(len(level)):
+        for x in range(len(level[y])):
+            if level[y][x] == 'x':
                 bots.append(Enemy(all_sprites, (x * tile_width, y * tile_height)))
                 bots_group.add(bots[-1])
     return a * tile_width, b * tile_height
 
+def generate_finish(level):
+    for y in range(len(level)):
+        for x in range(len(level[y])):
+            if level[y][x] == '?':
+                exit_group.add(Tile('portal', x, y))
+
 
 pygame.init()
-size = (889, 640)
+size = (1470, 930)
 gaming = True
 screen = pygame.display.set_mode(size)
 screen.fill(pygame.Color('BLACK'))
@@ -487,7 +499,7 @@ while gaming:
     if check:
         player.animation_stop()
     for event in pygame.event.get():
-        if event.type == pygame.QUIT or len(health) == 0:
+        if event.type == pygame.QUIT or len(health) == 0 or player.finish:
             gaming = False
 
     pulya_group.update()
