@@ -150,9 +150,6 @@ class Records:
             pygame.display.flip()
 
 
-bots = []
-
-
 def load_image(name, colorkey=-1):
     fullname = os.path.join('data', name)
     if not os.path.isfile(fullname):
@@ -172,6 +169,7 @@ def load_image(name, colorkey=-1):
 class Player(pygame.sprite.Sprite):
     def __init__(self, group, pos, level):
         super().__init__(group)
+        self.name = 'Player'
         self.level = level
         self.image = load_image("player/player_left1.png", -1)
         self.rect = self.image.get_rect()
@@ -180,7 +178,7 @@ class Player(pygame.sprite.Sprite):
         self.rect.y = pos[1]
         self.last_move = [0, 0]
         self.last_move2 = [0, 0]
-        self.speed_shooting = 10
+        self.speed_shooting = 7
         self.now_image = ['right', 'player/player_right1.png']
         self.images = {
             'down': ['player/player_down1.png', 'player/player_down2.png'],
@@ -198,12 +196,22 @@ class Player(pygame.sprite.Sprite):
 
     def check_on_collide(self):
         if pygame.sprite.spritecollideany(self, aptechka_group):
+            self_group = pygame.sprite.Group()
+            self_group.add(self) 
+            col = pygame.sprite.groupcollide(self_group, aptechka_group, False, False)
+            ban = []
+            for i in col.items():
+                obj = i[1][0]
+                ban.append(obj)
+            for i in ban:
+                aptechka_group.remove(i)
+                all_sprites.remove(i)
             x = health[-1].rect.x + 30
             y = health[-1].rect.y
             for i in range(10 - len(health)):
                 health.append(Health((x, y)))
                 x += 30
-        if pygame.sprite.spritecollideany(self, exit_group):
+        if pygame.sprite.spritecollideany(self, exit_group) and len(bots) <= 0:
             self.finish = True
         if pygame.sprite.spritecollideany(self, wall_group):
             self.come_back()
@@ -218,11 +226,15 @@ class Player(pygame.sprite.Sprite):
         if new_pos[1] != 0:
             if not pygame.sprite.spritecollideany(self, wall_group):
                 self.rect.y += new_pos[1]
-            self.check_on_collide()
-
+                self.check_on_collide()
+                self.last_move[1] = new_pos[1]
+                self.last_move2 = new_pos
         if new_pos[0] != 0:
             if not pygame.sprite.spritecollideany(self, wall_group):
                 self.rect.x += new_pos[0]
+                self.check_on_collide()
+                self.last_move[0] = new_pos[0]
+                self.last_move2 = new_pos
 
     def animation_stop(self):
         if self.now_image[0] == 'left':
@@ -246,6 +258,7 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
+        self.check_on_collide()
 
     def change_image_for_moving(self, new_pos):
         if new_pos[0] > 0:
@@ -285,6 +298,7 @@ class Player(pygame.sprite.Sprite):
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, group, pos, level):
         super().__init__(group)
+        self.name = 'Enemy'
         self.speed = 3
         self.level = level
         self.image = load_image("enemy\enemy_right1.png")
@@ -292,7 +306,8 @@ class Enemy(pygame.sprite.Sprite):
         self.rect.x = pos[0]
         self.cooldown = 700
         self.rect.y = pos[1]
-        self.distance = 300
+        self.distance = 200
+        self.max_distance = 300
         self.last_tick = 0
         self.last_move = [0, 0]
         self.last_move2 = [0, 0]
@@ -312,19 +327,18 @@ class Enemy(pygame.sprite.Sprite):
     def __call__(self, tick, player_pos):
         player_x = player_pos[0]
         player_y = player_pos[1]
-        if tick - self.last_tick > self.cooldown:
-            self.strike(self.find_path(player_pos))
-            self.last_tick = tick
-
         delta_x = player_x - self.rect.centerx
         delta_y = player_y - self.rect.centery
         dist = sqrt(delta_x ** 2 + delta_y ** 2)
+        if (tick - self.last_tick > self.cooldown) and (dist < self.max_distance):
+            self.strike(self.find_path(player_pos))
+            self.last_tick = tick
         if self.last_pos == self.rect.center:
             pass
         else:
             self.last_pos = self.rect.center
 
-        if dist > self.distance:
+        if dist > self.distance and dist < self.max_distance:
             time = dist / self.speed
             speed_x = delta_x / time
             speed_y = delta_y / time
@@ -333,32 +347,34 @@ class Enemy(pygame.sprite.Sprite):
     def come_back(self):
         self.rect.x = self.last_pos[0]
         self.rect.y = self.last_pos[1]
+        pygame.display.flip()
 
     def check_on_collide(self):
-        if pygame.sprite.spritecollideany(self, wall_group) or pygame.sprite.spritecollideany(self,
-                                                                                              horizontal_borders) or pygame.sprite.spritecollideany(
-            self,
-            vertical_borders):
+        if pygame.sprite.spritecollideany(self, exit_group) and len(bots) <= 0:
+            self.finish = True
+        if pygame.sprite.spritecollideany(self, wall_group):
             self.come_back()
         else:
             self.last_pos = [self.rect.x, self.rect.y]
 
     def update(self, new_pos):
-        if self.last_move2[0] != new_pos[0] or self.last_move2[1] != new_pos[1]:
+        self.check_on_collide()
+        if abs (self.last_move2[0] - new_pos[0]) >= 0.5 or abs(self.last_move2[1] - new_pos[1]) >= 0.5:
             self.change_image_for_moving(new_pos)
         else:
             self.animation_moving()
         if new_pos[1] != 0:
-            if not pygame.sprite.spritecollideany(self, wall_group) and not pygame.sprite.spritecollideany(self,
-                                                                                                           horizontal_borders):
+            if not pygame.sprite.spritecollideany(self, wall_group):
                 self.rect.y += new_pos[1]
-            self.check_on_collide()
-
+                self.check_on_collide()
+                self.last_move[1] = new_pos[1]
+                self.last_move2 = new_pos
         if new_pos[0] != 0:
-            if not pygame.sprite.spritecollideany(self, wall_group) and not pygame.sprite.spritecollideany(self,
-                                                                                                           vertical_borders):
+            if not pygame.sprite.spritecollideany(self, wall_group):
                 self.rect.x += new_pos[0]
-            self.check_on_collide()
+                self.check_on_collide()
+                self.last_move[0] = new_pos[0]
+                self.last_move2 = new_pos
 
     def animation_stop(self):
         if self.now_image[0] == 'left':
@@ -382,18 +398,19 @@ class Enemy(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
+        self.check_on_collide()
 
     def change_image_for_moving(self, new_pos):
-        if new_pos[0] > 0:
+        if new_pos[0] > 0 and new_pos[0] > abs(new_pos[1]):
             self.image = load_image('enemy\enemy_right1.png')
             self.now_image = ['right', 'enemy\enemy_right1.png']
-        if new_pos[0] < 0:
+        if new_pos[0] < 0 and abs(new_pos[0]) > abs(new_pos[1]):
             self.image = load_image('enemy\enemy_left1.png')
             self.now_image = ['left', 'enemy\enemy_left1.png']
-        if new_pos[1] > 0:
+        if new_pos[1] > 0 and abs(new_pos[1]) > abs(new_pos[0]):
             self.image = load_image('enemy\enemy_down1.png')
             self.now_image = ['down', 'enemy\enemy_down1.png']
-        if new_pos[1] < 0:
+        if new_pos[1] < 0 and abs(new_pos[1]) > abs(new_pos[0]):
             self.image = load_image('enemy\enemy_up1.png')
             self.now_image = ['up', 'enemy\enemy_up1.png']
         x = self.rect.x
@@ -401,6 +418,36 @@ class Enemy(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
+        self.check_on_collide()
+
+    def strike(self, speed):
+        pulya.append(Shooting(all_sprites, (self.rect.x, self.rect.y), (speed[0], speed[1]), self.level, player=True))
+        pulya_group.add(pulya[-1])
+
+    def find_path(self, dest):
+        dest_x, dest_y = dest[0], dest[1]
+        delta_x = dest_x - self.rect.centerx
+        delta_y = dest_y - self.rect.centery
+        dist = sqrt(delta_x ** 2 + delta_y ** 2)
+        time = dist / self.speed_shooting
+        speed_x = delta_x / time
+        speed_y = delta_y / time
+        return speed_x, speed_y
+
+    def animation_moving(self):
+        if self.now_image[1][-5] == '2':
+            self.image = load_image(self.images[self.now_image[0]][0])
+            self.now_image = [self.now_image[0], self.images[self.now_image[0]][0]]
+        else:
+            self.image = load_image(self.images[self.now_image[0]][1])
+            self.now_image = [self.now_image[0], self.images[self.now_image[0]][1]]
+        x = self.rect.x
+        y = self.rect.y
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+
+   
 
     def strike(self, speed):
         pulya.append(Shooting(all_sprites, (self.rect.x, self.rect.y), (speed[0], speed[1]), self.level, player=False))
@@ -413,14 +460,16 @@ class Enemy(pygame.sprite.Sprite):
         delta_y = dest_y - self.rect.centery
         dist = sqrt(delta_x ** 2 + delta_y ** 2)
         time = dist / self.speed_shooting
-        speed_x = delta_x / time
-        speed_y = delta_y / time
-        return speed_x, speed_y
+        if time:
+            speed_x = delta_x / time
+            speed_y = delta_y / time
+            return speed_x, speed_y
 
 
 class Shooting(pygame.sprite.Sprite):
     def __init__(self, group, pos, where, level, player):
         super().__init__(group)
+        self.name = 'Shooting'
         self.level = level
         self.image = load_image('objects\pulya.png')
         self.rect = self.image.get_rect()
@@ -485,6 +534,7 @@ class Shooting(pygame.sprite.Sprite):
 class Health(pygame.sprite.Sprite):
     def __init__(self, pos):
         super().__init__(all_sprites)
+        self.name = 'Health'
         self.image = load_image('objects\health.png')
         self.rect = self.image.get_rect()
         self.rect.x = pos[0]
@@ -517,6 +567,7 @@ class Health(pygame.sprite.Sprite):
 class Border(pygame.sprite.Sprite):
     def __init__(self, x1, y1, x2, y2):
         super().__init__(all_sprites)
+        self.name = 'Border'
         if x1 == x2:
             self.add(vertical_borders)
             self.image = pygame.Surface([1, y2 - y1])
@@ -532,6 +583,7 @@ tile_width = tile_height = 30
 
 class Tile(pygame.sprite.Sprite):
     def __init__(self, tile_type, pos_x, pos_y):
+        self.name = 'Tile'
         self.tile_images = {
             'wall': load_image('wall.png', 1),
             'empty': load_image('empty.png', 1),
@@ -544,6 +596,122 @@ class Tile(pygame.sprite.Sprite):
             tile_width * pos_x, tile_height * pos_y)
 
 
+class End():
+    def __init__(self) -> None:
+        pygame.init()
+        pygame.mixer.music.load("data/sounds/main_menu_theme.mp3")
+        pygame.mixer.music.play(-1)
+        pygame.mixer.music.set_volume(0.3)
+        size = (1000, 1000)
+        screen = pygame.display.set_mode(size)
+        screen.fill(pygame.Color('BLACK'))
+        self.menu()
+        self.punkts = punkts
+        self.window = screen
+
+    def render(self, poverhnost, font, num_punkt):
+        for i in self.punkts:
+            if num_punkt == i[5]:
+                poverhnost.blit(font.render(i[2], True, (222, 27, 27)), (i[0], i[1]))
+            else:
+                poverhnost.blit(font.render(i[2], True, i[3]), (i[0], i[1]))
+
+    def menu(self):
+        global timer
+        time = timer
+        h, m, s, ml = map(int, time.split(':'))
+        h *= 60 * 60 * 1000
+        m *=  60 * 1000
+        s *= 1000
+        score = max(0, 1000000 - h - m - s)
+        size = (1000, 1000)
+        screen = pygame .display.set_mode(size)
+        font = pygame.font.Font('data/fonts/Old-Soviet.otf', 30)
+        con = sqlite3.connect('data/game.sqlite')
+        cur = con.cursor()
+        clock = pygame .time.Clock()
+        input_box = pygame.Rect(400, 280, 100, 50)
+        color_inactive = pygame .Color((0, 0, 0))
+        color_active = pygame .Color((207, 48, 48))
+        color = color_inactive
+        active = False
+        text = ''
+        done = False
+
+
+        text1 = font.render('Введите никнейм', True, (0, 0, 0))
+        textRect1 = text1.get_rect()
+        textRect1.center = (200, 300)
+
+        text2 = font.render('Время', True, (0, 0, 0))
+        textRect2 = text2.get_rect()
+        textRect2.center = (100, 200)
+
+        text3 = font.render(f'{time}', True, (0, 0, 0))
+        textRect3 = text3.get_rect()
+        textRect3.center = (500, 200)
+
+        text4 = font.render('Счёт', True, (0, 0, 0))
+        textRect4 = text4.get_rect()
+        textRect4.center = (90, 100)
+
+        text5 = font.render(f'{score}', True, (0, 0, 0))
+        textRect5 = text5.get_rect()
+        textRect5.center = (500, 100)
+
+        text6 = font.render('Enter - для сохранения', True, (0, 0, 0))
+        textRect6 = text6.get_rect()
+        textRect6.center = (500, 400)
+
+        text7 = font.render('Сохранено', True, (207, 48, 48))
+        textRect7 = text7.get_rect()
+        textRect7.center = (500, 600)
+
+        save = False
+        while not done:
+            keys = pygame.key.get_pressed()
+            for event in pygame .event.get():
+                if event.type == pygame .QUIT:
+                    if event.type == pygame.QUIT:
+                        pygame.quit()
+                        quit()
+                if event.type == pygame .MOUSEBUTTONDOWN:
+                    if input_box.collidepoint(event.pos):
+                        active = not active
+                    else:
+                        active = False
+                    color = color_active if active else color_inactive
+                if event.type == pygame.KEYDOWN:
+                    if active:
+                        if event.key == pygame .K_RETURN:
+                            text = ''
+                        elif event.key == pygame .K_BACKSPACE:
+                            text = text[:-1]
+                        else:
+                            text += event.unicode
+            if keys[pygame.K_RETURN]:
+                save = True
+                cur.execute(f"INSERT INTO RECORDS (name, time, score) VALUES('{text}', '{time}', {score});")
+                con.commit()
+            if keys[pygame.K_ESCAPE]:
+                sys.exit()
+            screen.fill((163, 160, 160))
+            txt_surface = font.render(text, True, color)
+            width = max(200, txt_surface.get_width()+10)
+            input_box.w = width
+            if save:
+                screen.blit(text7, textRect7)
+            screen.blit(text1, textRect1)
+            screen.blit(text2, textRect2)
+            screen.blit(text3, textRect3)
+            screen.blit(text4, textRect4)
+            screen.blit(text5, textRect5)
+            screen.blit(text6, textRect6)
+            screen.blit(txt_surface, (input_box.x+5, input_box.y+5))
+            pygame .draw.rect(screen, color, input_box, 2)
+            pygame .display.flip()
+            clock.tick(30)
+
 def load_level(filename):
     filename = "data/" + filename
     with open(filename, 'r') as mapFile:
@@ -551,77 +719,86 @@ def load_level(filename):
     max_width = max(map(len, level_map))
     return list(map(lambda x: x.ljust(max_width, '.'), level_map))
 
-
 def generate_level(level):
+    global bots
+    bots = []
     a, b = None, None
     for y in range(len(level)):
         for x in range(len(level[y])):
             if level[y][x] == '.':
-                Tile('empty', x, y)
+                Tile('empty', x, y + 2)
             elif level[y][x] == '#':
-                wall_group.add(Tile('wall', x, y))
+                wall_group.add(Tile('wall', x, y + 2))
             elif level[y][x] == '@':
-                Tile('empty', x, y)
+                Tile('empty', x, y + 2)
                 a, b = x, y
             elif level[y][x] == 'x':
-                Tile('empty', x, y)
+                Tile('empty', x, y + 2)
             elif level[y][x] == '+':
-                aptechka_group.add(Tile('aptechka', x, y))
+                aptechka_group.add(Tile('aptechka', x, y + 2))
+            elif level[y][x] == '?':
+                portal = Tile('empty', x, y + 2)
+                exit_group.add(portal)
+                all_sprites.add(portal)
+
 
     for y in range(len(level)):
         for x in range(len(level[y])):
             if level[y][x] == 'x':
-                bots.append(Enemy(all_sprites, (x * tile_width, y * tile_height), level))
+                bots.append(Enemy(all_sprites, (x * tile_width, (y + 2) * tile_height), level))
                 bots_group.add(bots[-1])
     return a * tile_width, b * tile_height
 
-
 def generate_finish(level):
-    for y in range(len(level)):
-        for x in range(len(level[y])):
-            if level[y][x] == '?':
-                exit_group.add(Tile('portal', x, y))
+    ban = []
+    for i in exit_group:
+        ban.append(i)
+        x, y = i.rect.centerx, i.rect.centery
+        portal = Tile('portal', 0,  0)
+        portal.rect.centerx = x
+        portal.rect.centery = y
+        exit_group.add(portal)
+        all_sprites.add(portal)
+    for i in ban:
+        all_sprites.remove(i)
+        exit_group.remove(i)
 
-
-pygame.init()
-size = (1000, 1000)
-screen = pygame.display.set_mode(size)
-screen.fill(pygame.Color('BLACK'))
-
-# Меню
-
-
-pygame.mixer.music.load("data/sounds/main_menu_theme.mp3")
-pygame.mixer.music.play(-1)
-pygame.mixer.music.set_volume(0.3)
-
-punkts = [(400, 250, u'Game', (255, 255, 255), (250, 30, 2530), 0),
-          (340, 400, u'Statisticks', (255, 255, 255), (250, 30, 2530), 1),
-          (400, 550, u'Quit', (250, 250, 30), (250, 30, 2530), 2)]
-game = Menu(punkts=punkts, window=screen)
-game.menu(False)
-
-pygame.mixer.music.load("data/sounds/game_theme.mp3")
-pygame.mixer.music.play(-1)
-pygame.mixer.music.set_volume(0.3)
-
-all_levels = ['level_1.txt', 'level_2.txt', 'level_3.txt']
-
+class Camera:
+    # зададим начальный сдвиг камеры
+    def __init__(self, target):
+        self.dx = 0
+        self.dy = 0
+        self.x = target.rect.centerx - 450
+        self.y = target.rect.centery - 550
+        
+    # сдвинуть объект obj на смещение камеры
+    def apply(self, obj):
+        obj.rect.x += self.dx
+        obj.rect.y += self.dy
+        
+    
+    # позиционировать камеру на объекте target
+    def update(self, target):
+        self.dx = -(target.rect.centerx - self.x)
+        self.dy = -(target.rect.centery - self.y)
+        
+    
 
 def start_level(level):
     global size, gaming, screen, health, player, player_group, all_sprites, horizontal_borders, vertical_borders, pulya
-    global pulya_group, cont, exit_group, wall_group, all_sprites, bots_group, aptechka_group
-    size = (1470, 930)
-
+    global pulya_group, cont, exit_group, wall_group, all_sprites, bots_group, aptechka_group, bots, camera, timer
+    pygame.init()
+    size = (600, 600)
     gaming = True
+    font = pygame.font.Font('data/fonts/Old-Soviet.otf', 30)
     answer = 0
+    start_time = pygame.time.get_ticks()
     aptechka_group = pygame.sprite.Group()
     all_sprites = pygame.sprite.Group()
     bots_group = pygame.sprite.Group()
     exit_group = pygame.sprite.Group()
     wall_group = pygame.sprite.Group()
     screen = pygame.display.set_mode(size)
-    screen.fill(pygame.Color('BLACK'))
     # Игрок
     health = []
     player = Player(all_sprites, generate_level(load_level(level)), level)
@@ -633,12 +810,10 @@ def start_level(level):
     all_sprites.draw(screen)
 
     # Стены
-
+    
     horizontal_borders = pygame.sprite.Group()
     vertical_borders = pygame.sprite.Group()
-    Border(5, size[1] - 5, size[0] - 5, size[1] - 5)
-    Border(5, 40, 5, size[1] - 5)
-    Border(size[0] - 5, 40, size[0] - 5, size[1] - 5)
+
 
     pulya_group = pygame.sprite.Group()
     pulya = []
@@ -647,7 +822,7 @@ def start_level(level):
     fps = 110  # количество кадров в секунду
     clock = pygame.time.Clock()
     cont = False
-    player_speed = 3
+    player_speed = 4
 
     shoot_tick = 0
 
@@ -655,6 +830,12 @@ def start_level(level):
     for _ in range(10):
         health.append(Health((x, y)))
         x += 30
+    pygame.mixer.music.load("data/sounds/game_theme.mp3")
+    pygame.mixer.music.play(-1)
+    pygame.mixer.music.set_volume(0.3)
+    die = pygame.mixer.Sound("data/sounds/die.ogg")
+    camera = Camera(player)
+    camera.update(player)
     while gaming:
 
         keys = pygame.key.get_pressed()
@@ -668,27 +849,41 @@ def start_level(level):
             i(now_tick, player.rect.center)
 
         # Игрок
-
         if click[0] and now_tick - shoot_tick > player.cooldown:
             player.strike(player.find_path((mouse[0], mouse[1])))
             shoot_tick = pygame.time.get_ticks()
-        if keys[pygame.K_UP] or keys[pygame.K_w]:
-            player.update((0, -player_speed))
-            check = False
         if keys[pygame.K_ESCAPE]:
-            sys.exit()
-        if keys[pygame.K_DOWN] or keys[pygame.K_s]:
+            sys.exit()    
+        elif (keys[pygame.K_DOWN] or keys[pygame.K_s]) and (keys[pygame.K_LEFT] or keys[pygame.K_a]):
+            player.update((-sqrt(player_speed ** 2 / 2), sqrt(player_speed ** 2 / 2)))
+            check = False
+        elif (keys[pygame.K_UP] or keys[pygame.K_w]) and (keys[pygame.K_RIGHT] or keys[pygame.K_d]):
+            player.update((sqrt(player_speed ** 2 / 2), -sqrt(player_speed ** 2 / 2)))
+            check = False    
+        elif (keys[pygame.K_DOWN] or keys[pygame.K_s]) and (keys[pygame.K_RIGHT] or keys[pygame.K_d]):
+            player.update((sqrt(player_speed ** 2 / 2), sqrt(player_speed ** 2 / 2)))
+            check = False
+        elif (keys[pygame.K_UP] or keys[pygame.K_w]) and (keys[pygame.K_LEFT] or keys[pygame.K_a]):
+            player.update((-sqrt(player_speed ** 2 / 2), -sqrt(player_speed ** 2 / 2)))
+            check = False
+        elif keys[pygame.K_DOWN] or keys[pygame.K_s]:
             player.update((0, player_speed))
             check = False
-        if keys[pygame.K_LEFT] or keys[pygame.K_a]:
+        elif keys[pygame.K_LEFT] or keys[pygame.K_a]:
             player.update((-player_speed, 0))
             check = False
-        if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
+        elif keys[pygame.K_UP] or keys[pygame.K_w]:
+            player.update((0, -player_speed))
+            check = False
+        elif keys[pygame.K_RIGHT] or keys[pygame.K_d]:
             player.update((player_speed, 0))
             check = False
+
         if len(health) == 0:
             gaming = False
             answer = 2
+            die.play()
+            return answer
         if check:
             player.animation_stop()
         for event in pygame.event.get():
@@ -697,21 +892,57 @@ def start_level(level):
             if player.finish:
                 gaming = False
                 answer = 1
-        pulya_group.update()
+                return answer
 
-        screen.fill(pygame.Color('BLACK'))
+        pulya_group.update()
+        camera.update(player)
+        for sprite in all_sprites:
+            if sprite.name != 'Health':
+                camera.apply(sprite)
+        screen.fill(pygame.Color('WHITE'))
         all_sprites.draw(screen)
+        tt = pygame.time.get_ticks() - start_time
+        h = tt // 1000 // 60 //60 % 60
+        m = tt// 1000 // 60 % 60
+        s = tt // 1000 % 60
+        mil = tt % 1000
+        timer = f'{h}:{m}:{s}:{mil}'
+        time = font.render(timer, True, (0, 0, 0))
+        time1 = time.get_rect().center = (400, 10)
+        screen.blit(time, time1)
         pygame.display.flip()
         clock.tick(fps)
-    pygame.quit()
+
+        
+    #pygame.quit()
     # answer 1 - некст левел, 2 - повтор, 0 - конец
     return answer
 
 
+# Меню
+
+pygame.init()
+pygame.mixer.music.load("data/sounds/main_menu_theme.mp3")
+pygame.mixer.music.play(-1)
+pygame.mixer.music.set_volume(0.3)
+size = (1000, 1000)
+screen = pygame.display.set_mode(size)
+screen.fill(pygame.Color('BLACK'))
+punkts = [(400, 250, u'Game', (255, 255, 255), (250, 30, 2530), 0),
+          (340, 400, u'Statisticks', (255, 255, 255), (250, 30, 2530), 1),
+          (400, 550, u'Quit', (250, 250, 30), (250, 30, 2530), 2)]
+game = Menu(punkts=punkts, window=screen)
+game.menu(False)
+
+
+#all_levels = ['level_1.txt', 'level_2.txt', 'level_3.txt']
+all_levels = ['level_1.txt']
 for i in all_levels:
     answer = start_level(i)
     if answer == 2:
         while answer == 2:
             answer = start_level(i)
-    if answer == 0:
-        break
+    if answer == 1 and i == all_levels[-1]:
+        print('конец')
+        end = End()
+
