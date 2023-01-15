@@ -197,6 +197,12 @@ class Player(pygame.sprite.Sprite):
         pygame.display.flip()
 
     def check_on_collide(self):
+        if pygame.sprite.spritecollideany(self, aptechka_group):
+            x = health[-1].rect.x + 30
+            y = health[-1].rect.y
+            for i in range(10 - len(health)):
+                health.append(Health((x, y)))
+                x += 30
         if pygame.sprite.spritecollideany(self, exit_group):
             self.finish = True
         if pygame.sprite.spritecollideany(self, wall_group):
@@ -529,7 +535,8 @@ class Tile(pygame.sprite.Sprite):
         self.tile_images = {
             'wall': load_image('wall.png', 1),
             'empty': load_image('empty.png', 1),
-            'portal': load_image('portal.png', -1)
+            'portal': load_image('portal.png', -1),
+            'aptechka': load_image('objects/aptechka.png', -1)
         }
         super().__init__(all_sprites)
         self.image = self.tile_images[tile_type]
@@ -558,6 +565,8 @@ def generate_level(level):
                 a, b = x, y
             elif level[y][x] == 'x':
                 Tile('empty', x, y)
+            elif level[y][x] == '+':
+                aptechka_group.add(Tile('aptechka', x, y))
 
     for y in range(len(level)):
         for x in range(len(level[y])):
@@ -601,11 +610,12 @@ all_levels = ['level_1.txt', 'level_2.txt', 'level_3.txt']
 
 def start_level(level):
     global size, gaming, screen, health, player, player_group, all_sprites, horizontal_borders, vertical_borders, pulya
-    global pulya_group, cont, exit_group, wall_group, all_sprites, bots_group
+    global pulya_group, cont, exit_group, wall_group, all_sprites, bots_group, aptechka_group
     size = (1470, 930)
 
     gaming = True
     answer = 0
+    aptechka_group = pygame.sprite.Group()
     all_sprites = pygame.sprite.Group()
     bots_group = pygame.sprite.Group()
     exit_group = pygame.sprite.Group()
