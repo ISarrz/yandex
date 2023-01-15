@@ -304,7 +304,7 @@ class Enemy(pygame.sprite.Sprite):
         self.image = load_image("enemy\enemy_right1.png")
         self.rect = self.image.get_rect()
         self.rect.x = pos[0]
-        self.cooldown = 700
+        self.cooldown = 400
         self.rect.y = pos[1]
         self.distance = 200
         self.max_distance = 300
@@ -468,7 +468,9 @@ class Enemy(pygame.sprite.Sprite):
 
 class Shooting(pygame.sprite.Sprite):
     def __init__(self, group, pos, where, level, player):
+        global fire
         super().__init__(group)
+        fire.play()
         self.name = 'Shooting'
         self.level = level
         self.image = load_image('objects\pulya.png')
@@ -512,6 +514,7 @@ class Shooting(pygame.sprite.Sprite):
                     pulya_group.remove(delet)
                     check = True
                 if who.health == 0:
+                    kill.play()
                     delet = bots.pop(bots.index(who))
                     all_sprites.remove(delet)
                     bots_group.remove(delet)
@@ -544,9 +547,11 @@ class Health(pygame.sprite.Sprite):
         if action == 1 and 1 <= len(health) <= 9:  # здесь будет какая-то хилка
             health.append(Health((health[-1].rect.x + 30, 10)))
         if action == 0 and len(health) >= 1:
+            hirt.play()
             delet = health.pop(-1)
             all_sprites.remove(delet)
         if len(health) == 0:
+            kill.play()
             return 0
         return 1
 
@@ -765,11 +770,11 @@ def generate_finish(level):
 
 class Camera:
     # зададим начальный сдвиг камеры
-    def __init__(self, target):
+    def __init__(self, target, dx, dy):
         self.dx = 0
         self.dy = 0
-        self.x = target.rect.centerx - 450
-        self.y = target.rect.centery - 550
+        self.x = target.rect.centerx + dx 
+        self.y = target.rect.centery + dy 
         
     # сдвинуть объект obj на смещение камеры
     def apply(self, obj):
@@ -786,7 +791,8 @@ class Camera:
 
 def start_level(level):
     global size, gaming, screen, health, player, player_group, all_sprites, horizontal_borders, vertical_borders, pulya
-    global pulya_group, cont, exit_group, wall_group, all_sprites, bots_group, aptechka_group, bots, camera, timer
+    global pulya_group, cont, exit_group, wall_group, all_sprites, bots_group, aptechka_group, bots, camera, timer, fire, prtls
+    global hirt, kill
     pygame.init()
     size = (600, 600)
     gaming = True
@@ -834,7 +840,21 @@ def start_level(level):
     pygame.mixer.music.play(-1)
     pygame.mixer.music.set_volume(0.3)
     die = pygame.mixer.Sound("data/sounds/die.ogg")
-    camera = Camera(player)
+    fire = pygame.mixer.Sound("data/sounds/fire.ogg")
+    prtls = pygame.mixer.Sound("data/sounds/prtls.ogg")
+    hirt = pygame.mixer.Sound("data/sounds/hirt.ogg")
+    kill = pygame.mixer.Sound("data/sounds/kill.ogg")
+    if level == 'level_1.txt':
+        dx = -450
+        dy = -900
+    elif level == 'level_2.txt':
+        dx = -450
+        dy = -650
+    elif level == 'level_3.txt':
+        dx = -450
+        dy = -1200
+        player.cooldown = 100
+    camera = Camera(player, dx, dy)
     camera.update(player)
     while gaming:
 
@@ -889,9 +909,11 @@ def start_level(level):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 gaming = False
+                sys.exit()
             if player.finish:
                 gaming = False
                 answer = 1
+                prtls.play()
                 return answer
 
         pulya_group.update()
@@ -935,8 +957,8 @@ game = Menu(punkts=punkts, window=screen)
 game.menu(False)
 
 
-#all_levels = ['level_1.txt', 'level_2.txt', 'level_3.txt']
-all_levels = ['level_1.txt']
+all_levels = [ 'level_1.txt', 'level_2.txt', 'level_3.txt']
+
 for i in all_levels:
     answer = start_level(i)
     if answer == 2:
