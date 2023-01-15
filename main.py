@@ -4,6 +4,9 @@ import sys
 from math import sqrt
 import random
 
+bots = []
+
+
 def load_image(name, colorkey=-1):
     fullname = os.path.join('data', name)
     if not os.path.isfile(fullname):
@@ -23,7 +26,7 @@ def load_image(name, colorkey=-1):
 class Player(pygame.sprite.Sprite):
     def __init__(self, group, pos):
         super().__init__(group)
-        self.image = load_image("player/player_right1.png")
+        self.image = load_image("player/player_left1.png", -1)
         self.rect = self.image.get_rect()
         self.rect.x = pos[0]
         self.cooldown = 500
@@ -33,12 +36,32 @@ class Player(pygame.sprite.Sprite):
         self.speed_shooting = 10
         self.now_image = ['right', 'player/player_right1.png']
         self.images = {
-          
             'down': ['player/player_down1.png', 'player/player_down2.png'],
             'up': ['player/player_up1.png', 'player/player_up2.png'],
             'right': ['player/player_right1.png', 'player/player_right2.png'],
             'left': ['player/player_left1.png', 'player/player_left2.png']
         }
+        self.last_pos = [pos[0], pos[1]]
+        self.finish = False
+        print(pos)
+
+    def come_back(self):
+        print('ok')
+        print(self.last_pos, self.rect)
+        self.rect.x = self.last_pos[0]
+        self.rect.y = self.last_pos[1]
+        print(self.rect)
+        pygame.display.flip()
+
+    def check_on_collide(self):
+        if pygame.sprite.spritecollideany(self, exit_group):
+            self.finish = True
+        if pygame.sprite.spritecollideany(self, wall_group):
+            self.come_back()
+            print('collide')
+        else:
+            self.last_pos = [self.rect.x, self.rect.y]
+            print('change on', self.last_pos)
 
     def update(self, new_pos):
         if self.last_move2[0] != new_pos[0] or self.last_move2[1] != new_pos[1]:
@@ -46,19 +69,14 @@ class Player(pygame.sprite.Sprite):
         else:
             self.animation_moving()
         if new_pos[1] != 0:
-            if not pygame.sprite.spritecollideany(self, horizontal_borders):
+            if not pygame.sprite.spritecollideany(self, wall_group):
                 self.rect.y += new_pos[1]
-                self.last_move[1] = new_pos[1]
-                self.last_move2 = new_pos
-            else:
-                self.rect.y -= self.last_move[1]
+            self.check_on_collide()
+
+
         if new_pos[0] != 0:
-            if not pygame.sprite.spritecollideany(self, vertical_borders):
+            if not pygame.sprite.spritecollideany(self, wall_group):
                 self.rect.x += new_pos[0]
-                self.last_move[0] = new_pos[0]
-                self.last_move2 = new_pos
-            else:
-                self.rect.x -= self.last_move[0]
 
     def animation_stop(self):
         if self.now_image[0] == 'left':
@@ -101,6 +119,8 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
+        self.check_on_collide()
+
 
     def strike(self, speed):
         pulya.append(Shooting(all_sprites, (self.rect.x, self.rect.y), (speed[0], speed[1]), player=True))
@@ -110,7 +130,7 @@ class Player(pygame.sprite.Sprite):
         dest_x, dest_y = dest[0], dest[1]
         delta_x = dest_x - self.rect.centerx
         delta_y = dest_y - self.rect.centery
-        dist = sqrt(delta_x ** 2 +  delta_y ** 2)
+        dist = sqrt(delta_x ** 2 + delta_y ** 2)
         time = dist / self.speed_shooting
         speed_x = delta_x / time
         speed_y = delta_y / time
@@ -142,17 +162,16 @@ class Enemy(pygame.sprite.Sprite):
 
         self.health = 3
 
-
     def __call__(self, tick, player_pos):
         player_x = player_pos[0]
         player_y = player_pos[1]
         if tick - self.last_tick > self.cooldown:
             self.strike(self.find_path(player_pos))
             self.last_tick = tick
-        
+
         delta_x = player_x - self.rect.centerx
         delta_y = player_y - self.rect.centery
-        dist = sqrt(delta_x ** 2 +  delta_y ** 2)
+        dist = sqrt(delta_x ** 2 + delta_y ** 2)
         if self.last_pos == self.rect.center:
             pass
         else:
@@ -163,18 +182,6 @@ class Enemy(pygame.sprite.Sprite):
             speed_x = delta_x / time
             speed_y = delta_y / time
             self.update((speed_x, speed_y))
-    """
-    def check_on_shooting(self):
-        if self.health:
-            if pygame.sprite.spritecollideany(self, pulya_group):
-                print('ok')
-                self.health -= 1
-        else:
-            delet = bots.pop(bots.index(self))
-            all_sprites.remove(delet)
-            bots_group.remove(delet)
-            """
-
 
     def update(self, new_pos):
         if self.last_move2[0] != new_pos[0] or self.last_move2[1] != new_pos[1]:
@@ -182,7 +189,8 @@ class Enemy(pygame.sprite.Sprite):
         else:
             self.animation_moving()
         if new_pos[1] != 0:
-            if not pygame.sprite.spritecollideany(self, horizontal_borders):
+            if not pygame.sprite.spritecollideany(self, wall_group) and not pygame.sprite.spritecollideany(self,
+                                                                                                           horizontal_borders):
                 self.rect.y += new_pos[1]
                 self.last_move[1] = new_pos[1]
                 self.last_move2 = new_pos
@@ -190,7 +198,8 @@ class Enemy(pygame.sprite.Sprite):
             else:
                 self.rect.y -= self.last_move[1]
         if new_pos[0] != 0:
-            if not pygame.sprite.spritecollideany(self, vertical_borders):
+            if not pygame.sprite.spritecollideany(self, wall_group) and not pygame.sprite.spritecollideany(self,
+                                                                                                           horizontal_borders):
                 self.rect.x += new_pos[0]
                 self.last_move[0] = new_pos[0]
                 self.last_move2 = new_pos
@@ -249,7 +258,7 @@ class Enemy(pygame.sprite.Sprite):
         dest_y = dest[1]
         delta_x = dest_x - self.rect.centerx
         delta_y = dest_y - self.rect.centery
-        dist = sqrt(delta_x ** 2 +  delta_y ** 2)
+        dist = sqrt(delta_x ** 2 + delta_y ** 2)
         time = dist / self.speed_shooting
         speed_x = delta_x / time
         speed_y = delta_y / time
@@ -267,16 +276,23 @@ class Shooting(pygame.sprite.Sprite):
         self.where = where
 
     def update(self):
+        check = False
         if not self.player:
             if pygame.sprite.spritecollideany(self, player_group):
                 if health:
                     health[-1].update(0)
                 else:
                     pygame.quit()
-                
+
                 delet = pulya.pop(pulya.index(self))
                 all_sprites.remove(delet)
                 pulya_group.remove(delet)
+                check = True
+            elif pygame.sprite.spritecollideany(self, wall_group):
+                delet = pulya.pop(pulya.index(self))
+                all_sprites.remove(delet)
+                pulya_group.remove(delet)
+                check = True
         else:
             who = pygame.sprite.spritecollideany(self, bots_group)
             if who:
@@ -286,22 +302,24 @@ class Shooting(pygame.sprite.Sprite):
                     delet = pulya.pop(pulya.index(self))
                     all_sprites.remove(delet)
                     pulya_group.remove(delet)
+                    check = True
                 if who.health == 0:
                     delet = bots.pop(bots.index(who))
                     all_sprites.remove(delet)
                     bots_group.remove(delet)
+                    check = True
+                if len(bots) == 0:
+                    generate_finish(load_level('level_1.txt'))
 
-                
-        if not pygame.sprite.spritecollideany(self, horizontal_borders) and not pygame.sprite.spritecollideany(self, vertical_borders):
+        if not pygame.sprite.spritecollideany(self, horizontal_borders) and not pygame.sprite.spritecollideany(self,
+                                                                                                               vertical_borders):
             self.rect.x += self.where[0]
             self.rect.y += self.where[1]
         else:
-            delet = pulya.pop(pulya.index(self))
-            all_sprites.remove(delet)
-            pulya_group.remove(delet)
-
-
-
+            if not check:
+                delet = pulya.pop(pulya.index(self))
+                all_sprites.remove(delet)
+                pulya_group.remove(delet)
 
 
 class Health(pygame.sprite.Sprite):
@@ -322,6 +340,19 @@ class Health(pygame.sprite.Sprite):
             return 0
         return 1
 
+    class Camera:
+        def __init__(self):
+            self.dx = 0
+            self.dy = 0
+
+        def apply(self, obj):
+            obj.rect.x += self.dx
+            obj.rect.y += self.dy
+
+        def update(self, target):
+            self.dx = -(target.rect.x + target.rect.w // 2)
+            self.dy = -(target.rect.y + target.rect.h // 2)
+
 
 class Border(pygame.sprite.Sprite):
     def __init__(self, x1, y1, x2, y2):
@@ -335,6 +366,12 @@ class Border(pygame.sprite.Sprite):
             self.image = pygame.Surface([x2 - x1, 1])
             self.rect = pygame.Rect(x1, y1, x2 - x1, 1)
 
+
+tile_width = tile_height = 30
+exit_group = pygame.sprite.Group()
+wall_group = pygame.sprite.Group()
+
+
 class Menu:
     def __init__(self, window, punkts) -> None:
         self.punkts = punkts
@@ -346,6 +383,7 @@ class Menu:
                 poverhnost.blit(font.render(i[2], True, (222, 27, 27)), (i[0], i[1]))
             else:
                 poverhnost.blit(font.render(i[2], True, i[3]), (i[0], i[1]))
+
     def menu(self, esc):
         done = True
         font_menu = pygame.font.Font('data/fonts/Purisa.ttf', 60)
@@ -360,7 +398,6 @@ class Menu:
                 if mp[0] > i[0] and mp[0] < i[0] + 155 and mp[1] > i[1] and mp[1] < i[1] + 50:
                     punkt = i[5]
                     break
-
 
             self.render(screen, font_menu, punkt)
             for e in pygame.event.get():
@@ -380,11 +417,8 @@ class Menu:
             if not esc:
                 esc = False
 
-
-                    
             self.window.blit(screen, (0, 0))
             pygame.display.flip()
-
 
 
 class Records:
@@ -392,6 +426,7 @@ class Records:
         self.punkts = punkts
         self.window = window
         self.menu = menu
+
     def records(self):
         done = True
         font_menu = pygame.font.Font('data/fonts/Old-Soviet.otf', 60)
@@ -401,7 +436,7 @@ class Records:
             screen.fill((66, 62, 62))
             mp = pygame.mouse.get_pos()
 
-            #self.render(screen, font_menu, punkt)
+            # self.render(screen, font_menu, punkt)
             for e in pygame.event.get():
                 if e.type == pygame.QUIT:
                     sys.exit()
@@ -410,17 +445,69 @@ class Records:
                 pygame.display.flip()
                 done = False
                 self.menu.menu(True)
-                
+
             self.window.blit(screen, (0, 0))
             pygame.display.flip()
 
 
-pygame.init()
+class Tile(pygame.sprite.Sprite):
+    def __init__(self, tile_type, pos_x, pos_y):
+        self.tile_images = {
+            'wall': load_image('wall.png', 1),
+            'empty': load_image('empty.png', 1),
+            'portal': load_image('portal.png', -1)
+        }
+        super().__init__(all_sprites)
+        self.image = self.tile_images[tile_type]
+        self.rect = self.image.get_rect().move(
+            tile_width * pos_x, tile_height * pos_y)
 
-size = (1000, 1000)
+
+
+def load_level(filename):
+    filename = "data/" + filename
+    with open(filename, 'r') as mapFile:
+        level_map = [line.strip() for line in mapFile]
+    max_width = max(map(len, level_map))
+    return list(map(lambda x: x.ljust(max_width, '.'), level_map))
+
+
+bots_group = pygame.sprite.Group()
+
+
+def generate_level(level):
+    a, b = None, None
+    for y in range(len(level)):
+        for x in range(len(level[y])):
+            if level[y][x] == '.':
+                Tile('empty', x, y)
+            elif level[y][x] == '#':
+                wall_group.add(Tile('wall', x, y))
+            elif level[y][x] == '@':
+                Tile('empty', x, y)
+                a, b = x, y
+            elif level[y][x] == 'x':
+                Tile('empty', x, y)
+
+    for y in range(len(level)):
+        for x in range(len(level[y])):
+            if level[y][x] == 'x':
+                bots.append(Enemy(all_sprites, (x * tile_width, y * tile_height)))
+                bots_group.add(bots[-1])
+    return a * tile_width, b * tile_height
+
+def generate_finish(level):
+    for y in range(len(level)):
+        for x in range(len(level[y])):
+            if level[y][x] == '?':
+                exit_group.add(Tile('portal', x, y))
+
+
+pygame.init()
+size = (1470, 930)
 gaming = True
 screen = pygame.display.set_mode(size)
-screen.fill(pygame.Color('WHITE'))
+screen.fill(pygame.Color('BLACK'))
 
 all_sprites = pygame.sprite.Group()
 # Меню
@@ -441,16 +528,12 @@ pygame.mixer.music.set_volume(0.3)
 
 # Игрок
 health = []
+player = Player(all_sprites, generate_level(load_level('level_1.txt')))
 player_group = pygame.sprite.Group()
-player = Player(all_sprites, (40, 50))
 player_group.add(player)
 
 # Боты
-enemy = Enemy(all_sprites, (500, 500))
-bots = []
-bots_group = pygame.sprite.Group()
-bots_group.add(enemy)
-bots.append(enemy)
+
 all_sprites.draw(screen)
 
 # Стены
@@ -461,7 +544,6 @@ Border(5, 40, size[0] - 5, 40)
 Border(5, size[1] - 5, size[0] - 5, size[1] - 5)
 Border(5, 40, 5, size[1] - 5)
 Border(size[0] - 5, 40, size[0] - 5, size[1] - 5)
-
 
 pulya_group = pygame.sprite.Group()
 pulya = []
@@ -475,15 +557,10 @@ clock = pygame.time.Clock()
 cont = False
 player_speed = 3
 
-
 shoot_tick = 0
-# Музыка
-
-
 
 while gaming:
-    
-    
+
     keys = pygame.key.get_pressed()
     mouse = pygame.mouse.get_pos()
     click = pygame.mouse.get_pressed()
@@ -493,9 +570,6 @@ while gaming:
     # Боты
     for i in bots:
         i(now_tick, player.rect.center)
-
-       
-        
 
     # Игрок
 
@@ -520,11 +594,11 @@ while gaming:
     if check:
         player.animation_stop()
     for event in pygame.event.get():
-        if event.type == pygame.QUIT or len(health) == 0:
+        if event.type == pygame.QUIT or len(health) == 0 or player.finish:
             gaming = False
 
     pulya_group.update()
-    screen.fill(pygame.Color('WHITE'))
+    screen.fill(pygame.Color('BLACK'))
     all_sprites.draw(screen)
     pygame.display.flip()
     clock.tick(fps)
