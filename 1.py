@@ -43,6 +43,20 @@ class Player(pygame.sprite.Sprite):
         }
         self.mask = pygame.mask.from_surface(self.image)
 
+    def collide_x(self):
+        if pygame.sprite.spritecollideany(self, wall_group):
+            self.rect.x += 3
+        if pygame.sprite.spritecollideany(self, wall_group):
+            self.rect.x -= 6
+
+    def collide_y(self):
+        if pygame.sprite.spritecollideany(self, wall_group) or pygame.sprite.spritecollideany(self,
+                                                                                              horizontal_borders):
+            self.rect.y += 3
+        if pygame.sprite.spritecollideany(self, wall_group) or pygame.sprite.spritecollideany(self,
+                                                                                                           horizontal_borders):
+            self.rect.y -= 6
+
     def update(self, new_pos):
         if self.last_move2[0] != new_pos[0] or self.last_move2[1] != new_pos[1]:
             self.change_image_for_moving(new_pos)
@@ -56,6 +70,8 @@ class Player(pygame.sprite.Sprite):
                 self.last_move2 = new_pos
             else:
                 self.rect.y -= self.last_move[1]
+                self.collide_x()
+
         if new_pos[0] != 0:
             if not pygame.sprite.spritecollideany(self, wall_group) and not pygame.sprite.spritecollideany(self,
                                                                                                            vertical_borders):
@@ -64,6 +80,7 @@ class Player(pygame.sprite.Sprite):
                 self.last_move2 = new_pos
             else:
                 self.rect.x -= self.last_move[0]
+                self.collide_y()
 
     def animation_stop(self):
         if self.now_image[0] == 'left':
@@ -261,20 +278,24 @@ class Shooting(pygame.sprite.Sprite):
         self.where = where
 
     def update(self):
+        check = False
         if not self.player:
             if pygame.sprite.spritecollideany(self, player_group):
                 if health:
-                    health[-1].update(0)
+                    pass
+                    #health[-1].update(0)
                 else:
                     pygame.quit()
 
                 delet = pulya.pop(pulya.index(self))
                 all_sprites.remove(delet)
                 pulya_group.remove(delet)
-            if pygame.sprite.spritecollideany(self, wall_group):
+                check = True
+            elif pygame.sprite.spritecollideany(self, wall_group):
                 delet = pulya.pop(pulya.index(self))
                 all_sprites.remove(delet)
                 pulya_group.remove(delet)
+                check = True
         else:
             who = pygame.sprite.spritecollideany(self, bots_group)
             if who:
@@ -284,19 +305,22 @@ class Shooting(pygame.sprite.Sprite):
                     delet = pulya.pop(pulya.index(self))
                     all_sprites.remove(delet)
                     pulya_group.remove(delet)
+                    check = True
                 if who.health == 0:
                     delet = bots.pop(bots.index(who))
                     all_sprites.remove(delet)
                     bots_group.remove(delet)
+                    check = True
 
         if not pygame.sprite.spritecollideany(self, horizontal_borders) and not pygame.sprite.spritecollideany(self,
                                                                                                                vertical_borders):
             self.rect.x += self.where[0]
             self.rect.y += self.where[1]
         else:
-            delet = pulya.pop(pulya.index(self))
-            all_sprites.remove(delet)
-            pulya_group.remove(delet)
+            if not check:
+                delet = pulya.pop(pulya.index(self))
+                all_sprites.remove(delet)
+                pulya_group.remove(delet)
 
 
 class Health(pygame.sprite.Sprite):
