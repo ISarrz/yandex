@@ -133,7 +133,7 @@ class Player(pygame.sprite.Sprite):
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, group, pos, level):
         super().__init__(group)
-        self.speed = 4
+        self.speed = 3
         self.level = level
         self.image = load_image("enemy\enemy_right1.png")
         self.rect = self.image.get_rect()
@@ -537,7 +537,7 @@ def start_level(level):
     size = (1470, 930)
 
     gaming = True
-    next_level = False
+    answer = 0
     all_sprites = pygame.sprite.Group()
     bots_group = pygame.sprite.Group()
     exit_group = pygame.sprite.Group()
@@ -558,7 +558,6 @@ def start_level(level):
 
     horizontal_borders = pygame.sprite.Group()
     vertical_borders = pygame.sprite.Group()
-    Border(5, 40, size[0] - 5, 40)
     Border(5, size[1] - 5, size[0] - 5, size[1] - 5)
     Border(5, 40, 5, size[1] - 5)
     Border(size[0] - 5, 40, size[0] - 5, size[1] - 5)
@@ -609,25 +608,33 @@ def start_level(level):
         if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
             player.update((player_speed, 0))
             check = False
-
+        if len(health) == 0:
+            gaming = False
+            answer = 2
         if check:
             player.animation_stop()
         for event in pygame.event.get():
-            if event.type == pygame.QUIT or len(health) == 0:
+            if event.type == pygame.QUIT:
                 gaming = False
             if player.finish:
                 gaming = False
-                next_level = True
+                answer = 1
         pulya_group.update()
+
         screen.fill(pygame.Color('BLACK'))
         all_sprites.draw(screen)
         pygame.display.flip()
         clock.tick(fps)
     pygame.quit()
-    return next_level
+    #answer 1 - некст левел, 2 - повтор, 0 - конец
+    return answer
 
 
 for i in all_levels:
     answer = start_level(i)
-    if not answer:
+    if answer == 2:
+        while answer == 2:
+            answer = start_level(i)
+    if answer == 0:
         break
+
