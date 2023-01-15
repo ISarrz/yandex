@@ -465,7 +465,7 @@ cont = False
 player_speed = 3
 
 shoot_tick = 0
-
+print('start')
 while gaming:
 
     keys = pygame.key.get_pressed()
